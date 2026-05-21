@@ -1,0 +1,220 @@
+<!-- ═══════════════════════════════════════════════════════════
+     Payments Matching Tool – App Component Template
+═══════════════════════════════════════════════════════════ -->
+<div class="page-wrapper">
+
+  <!-- ── Header ───────────────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="logo-mark">
+        <span class="logo-icon">⚖</span>
+      </div>
+      <div class="header-text">
+        <h1 class="app-title">Payments Matching</h1>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- ── Upload & Run Card ─────────────────────────────────── -->
+    <section class="card upload-card">
+      <h2 class="section-heading">
+        <span class="step-badge">1</span>Upload &amp; Run Match
+      </h2>
+
+      <div class="file-upload-grid">
+        <!-- System CSV -->
+        <div class="file-field" [class.has-file]="systemFile">
+          <label class="file-label" for="systemFile">
+            <span class="file-icon">🗂</span>
+            <span class="file-label-text">System CSV</span>
+          </label>
+          <div class="file-input-wrapper">
+            <input
+              id="systemFile"
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              (change)="onSystemFileChange($event)"
+              class="file-input"
+            />
+            <span class="file-name">{{ systemFile ? systemFile.name : 'No file chosen' }}</span>
+          </div>
+        </div>
+
+        <!-- Provider CSV -->
+        <div class="file-field" [class.has-file]="providerFile">
+          <label class="file-label" for="providerFile">
+            <span class="file-icon">🏦</span>
+            <span class="file-label-text">Provider CSV</span>
+          </label>
+          <div class="file-input-wrapper">
+            <input
+              id="providerFile"
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              (change)="onProviderFileChange($event)"
+              class="file-input"
+            />
+            <span class="file-name">{{ providerFile ? providerFile.name : 'No file chosen' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div *ngIf="errorMsg" class="alert alert-error" role="alert">
+        <span class="alert-icon">⚠</span>{{ errorMsg }}
+      </div>
+
+      <!-- Run button -->
+      <button
+        class="btn btn-primary run-btn"
+        (click)="runMatch()"
+        [disabled]="isLoading"
+        [class.loading]="isLoading"
+      >
+        <span *ngIf="!isLoading" class="btn-inner">
+          <span class="btn-icon">▶</span> Run Match
+        </span>
+        <span *ngIf="isLoading" class="btn-inner spinner-text">
+          <span class="spinner"></span> Processing…
+        </span>
+      </button>
+    </section>
+
+    <!-- ── Results Section ───────────────────────────────────── -->
+    <section *ngIf="summary" class="card results-card">
+      <h2 class="section-heading">
+        <span class="step-badge">2</span>Results
+        <span class="session-tag">Session #{{ summary.sessionId }}</span>
+      </h2>
+
+      <!-- Summary Strip -->
+      <div class="summary-strip">
+        <div class="stat-chip stat-total">
+          <span class="stat-num">{{ summary.totalCount }}</span>
+          <span class="stat-lbl">Total</span>
+        </div>
+        <div class="stat-chip stat-matched">
+          <span class="stat-num">{{ summary.matchedCount }}</span>
+          <span class="stat-lbl">Matched</span>
+        </div>
+        <div class="stat-chip stat-mismatch">
+          <span class="stat-num">{{ summary.amountMismatchCount }}</span>
+          <span class="stat-lbl">Mismatch</span>
+        </div>
+        <div class="stat-chip stat-sys">
+          <span class="stat-num">{{ summary.onlySystemCount }}</span>
+          <span class="stat-lbl">Only System</span>
+        </div>
+        <div class="stat-chip stat-prov">
+          <span class="stat-num">{{ summary.onlyProviderCount }}</span>
+          <span class="stat-lbl">Only Provider</span>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <label class="filter-label">Show:</label>
+        <div class="filter-btns">
+          <button
+            *ngFor="let f of ['all', 'unresolved', 'resolved']"
+            class="filter-btn"
+            [class.active]="activeFilter === f"
+            (click)="applyFilter($any(f))"
+          >{{ f | titlecase }}</button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrapper">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Currency</th>
+              <th class="num-col">System Amt</th>
+              <th class="num-col">Provider Amt</th>
+              <th>Status</th>
+              <th>Resolved</th>
+              <th>Resolution Side</th>
+              <th class="actions-col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let row of filteredResults"
+              [class.row-resolved]="row.isResolved"
+              [class.row-mismatch]="row.status === 'AMOUNTMISMATCH' && !row.isResolved"
+            >
+              <td class="order-id">{{ row.orderId }}</td>
+              <td>
+                <span class="currency-tag">{{ row.currency }}</span>
+              </td>
+              <td class="num-col">{{ formatAmount(row.systemAmount) }}</td>
+              <td class="num-col">{{ formatAmount(row.providerAmount) }}</td>
+              <td>
+                <span class="badge" [ngClass]="statusClass(row.status)">
+                  {{ statusLabel(row.status) }}
+                </span>
+              </td>
+              <td>
+                <span class="resolved-dot" [class.dot-yes]="row.isResolved" [class.dot-no]="!row.isResolved">
+                  {{ row.isResolved ? '✓ Yes' : '– No' }}
+                </span>
+              </td>
+              <td>
+                <span *ngIf="row.resolutionSide" class="resolution-tag" [class.res-system]="row.resolutionSide === 'System'" [class.res-provider]="row.resolutionSide === 'Provider'">
+                  {{ row.resolutionSide }}
+                </span>
+                <span *ngIf="!row.resolutionSide" class="text-muted">—</span>
+              </td>
+              <td class="actions-col">
+                <ng-container *ngIf="!row.isResolved; else resolvedActions">
+                  <button
+                    class="btn btn-sm btn-sys"
+                    (click)="resolve(row, 'System')"
+                    [disabled]="resolvingId === row.id"
+                    title="Accept System amount"
+                  >
+                    <span *ngIf="resolvingId !== row.id">Accept System</span>
+                    <span *ngIf="resolvingId === row.id" class="spinner sm"></span>
+                  </button>
+                  <button
+                    class="btn btn-sm btn-prov"
+                    (click)="resolve(row, 'Provider')"
+                    [disabled]="resolvingId === row.id"
+                    title="Accept Provider amount"
+                  >
+                    <span *ngIf="resolvingId !== row.id">Accept Provider</span>
+                    <span *ngIf="resolvingId === row.id" class="spinner sm"></span>
+                  </button>
+                </ng-container>
+                <ng-template #resolvedActions>
+                  <span class="resolved-label">Resolved</span>
+                </ng-template>
+              </td>
+            </tr>
+
+            <!-- Empty state -->
+            <tr *ngIf="filteredResults.length == 0">
+              <td colspan="8" class="empty-row">
+                <span class="empty-icon">🔍</span>
+                No records match the current filter.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="row-count">
+        Showing {{ filteredResults.length }} of {{ summary.totalCount }} records
+      </p>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    Payments Matching Tool &nbsp;·&nbsp; Built with Angular + .NET Core
+  </footer>
+</div>

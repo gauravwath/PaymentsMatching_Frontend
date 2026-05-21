@@ -1,0 +1,16 @@
+/* Global reset */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #0f1117;
+  min-height: 100vh;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #181c27; }
+::-webkit-scrollbar-thumb { background: #2a2f45; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #353b54; }
+
